@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
     lin_core::LidarOdometry::Ptr LOdom;
     LOdom = std::make_shared<lin_core::LidarOdometry>(ndt_resolution, "", true);
     imuPacket::imuPacket imupacket;
-    for (const rosbag::MessageInstance& m : view) {
+    for (const rosbag::MessageInstance& m : view) { // 挨个读取bag中的message
         /// If ROS wants us to stop, break out
         if(!ros::ok())
             break;
@@ -106,9 +106,9 @@ int main(int argc, char** argv) {
         }
 
         /// Handle Lidar measurement
-        sensor_msgs::PointCloud2::ConstPtr s_lidar = m.instantiate<sensor_msgs::PointCloud2>();
+        sensor_msgs::PointCloud2::ConstPtr s_lidar = m.instantiate<sensor_msgs::PointCloud2>(); //读入bag中的pointcloud2消息
         if (s_lidar != nullptr && m.getTopic() == topic_lidar) {
-            lin_core::VPointCloud::Ptr cloud_pcl(new lin_core::VPointCloud);
+            lin_core::VPointCloud::Ptr cloud_pcl(new lin_core::VPointCloud);  //就是PointCloud<PointXYZI>
             pcl::fromROSMsg(*s_lidar, *cloud_pcl);
             LOdom->feedScan((*s_lidar).header.stamp.toSec(), cloud_pcl);
             LOdom->append_and_update(true);

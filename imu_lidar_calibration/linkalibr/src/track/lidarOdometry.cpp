@@ -30,7 +30,7 @@ namespace lin_core {
     void LidarOdometry::feedScan(double timestamp,
                                  VPointCloud::Ptr cur_scan,
                                  Eigen::Matrix4d pose_predict) {
-        odom_curr.timestamp = timestamp;
+        odom_curr.timestamp = timestamp; //帧头时间戳
         odom_curr.pose = Eigen::Matrix4d::Identity();
         pcl::PointCloud<pcl::PointXYZI>::Ptr scan_in_target(new pcl::PointCloud<pcl::PointXYZI>());
         current_scan = *cur_scan;

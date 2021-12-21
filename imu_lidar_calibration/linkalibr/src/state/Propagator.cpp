@@ -62,7 +62,7 @@ std::vector<Propagator::IMUDATA> Propagator::select_IMU_readings(const std::vect
 
     /// Check that we have at least one measurement to propagate with
     if(prop_data.empty()) {
-        printf(YELLOW "Propagator::select_imu_readings(): No IMU measurement to propgate with (%d of 2) \n"
+        printf(YELLOW "Propagator::select_imu_readings(): No IMU measurement to propagate with (%d of 2) \n"
                RESET, (int)prop_data.size());
         return prop_data;
     }

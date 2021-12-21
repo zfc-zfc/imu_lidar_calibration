@@ -60,8 +60,6 @@ void lin_estimator::lincalibManager::do_undistortion(double timestamp,
                                                      TPointCloud& scan_raw,
                                                      TPointCloud::Ptr& scan_out,
                                                      Eigen::Matrix4d& T_ndt_predict) {
-    scan_out->header = scan_raw.header;
-    scan_out->is_dense = scan_raw.is_dense;
 
     /// IMU to LIDAR extrinsic calibration
     Pose *calibration = state->_calib_LIDARtoIMU;
@@ -80,46 +78,89 @@ void lin_estimator::lincalibManager::do_undistortion(double timestamp,
     scan_out->width = scan_raw.width;
     scan_out->is_dense = scan_raw.is_dense;
     scan_out->resize(scan_raw.width*scan_raw.height);
-    for(int h = 0; h < scan_raw.height; h++) {
-        for(int w = 0; w < scan_raw.width; w++) {
-            TPoint scan_point = scan_raw.at(w, h);
-            uint32_t point_timestamp = scan_raw.at(w, h).t;
-            Eigen::Vector3d skewedPoint = Eigen::Vector3d(scan_point.x, scan_point.y, scan_point.z);
-            /// Ignore NaNs
-            if(pcl_isnan(scan_point.x) || pcl_isnan(scan_point.y) || pcl_isnan(scan_point.z)) {
-                continue;
-            }
-
-            if (!point_timestamps.empty()) {
-                auto it = find(point_timestamps.begin(), point_timestamps.end(), point_timestamp);
-                if (it == point_timestamps.end()) {
-                    /// New timestamp
-                    point_timestamps.push_back(point_timestamp);
-                    double pointCurrTimeStamp = timestamp + point_timestamp/1e9;
-                    Eigen::Matrix<double, 13, 1> imu_state_plus;
-                    propagator->fast_state_propagate(state, pointCurrTimeStamp, imu_state_plus);
-                    stamped_poses.insert(std::make_pair(point_timestamp, imu_state_plus));
+    if(scan_raw.height > 1){
+        for(int h = 0; h < scan_raw.height; h++) {
+            for(int w = 0; w < scan_raw.width; w++) {
+                TPoint scan_point = scan_raw.at(w, h);
+                uint32_t point_timestamp = scan_raw.at(w, h).t;
+                Eigen::Vector3d skewedPoint = Eigen::Vector3d(scan_point.x, scan_point.y, scan_point.z);
+                /// Ignore NaNs
+                if(pcl_isnan(scan_point.x) || pcl_isnan(scan_point.y) || pcl_isnan(scan_point.z)) {
+                    continue;
                 }
-            } else {
-                /// This is the first point
+
+                if (!point_timestamps.empty()) {
+                    auto it = find(point_timestamps.begin(), point_timestamps.end(), point_timestamp);
+                    if (it == point_timestamps.end()) {
+                        /// New timestamp
+                        point_timestamps.push_back(point_timestamp);
+                        double pointCurrTimeStamp = timestamp + point_timestamp/1e9;
+                        Eigen::Matrix<double, 13, 1> imu_state_plus;
+                        propagator->fast_state_propagate(state, pointCurrTimeStamp, imu_state_plus);
+                        stamped_poses.insert(std::make_pair(point_timestamp, imu_state_plus));
+                    }
+                } else {
+                    /// This is the first point
 //                assert(i == 0);
-                point_timestamps.push_back(point_timestamp);
-                pointStartTimeStamp = timestamp + point_timestamp/1e9;
-                propagator->fast_state_propagate(state, pointStartTimeStamp, imu_state_start);
-                stamped_poses.insert(std::make_pair(point_timestamp, imu_state_start));
+                    point_timestamps.push_back(point_timestamp);
+                    pointStartTimeStamp = timestamp + point_timestamp/1e9;
+                    propagator->fast_state_propagate(state, pointStartTimeStamp, imu_state_start);
+                    stamped_poses.insert(std::make_pair(point_timestamp, imu_state_start));
+                }
+                Eigen::Matrix<double, 13, 1> imu_state_plus = stamped_poses.find(point_timestamp)->second;
+                Eigen::Vector3d deskewedPoint = deskewPoint(imu_state_start, imu_state_plus, skewedPoint, I_R_L, I_t_L);
+                TPoint deskewed_scan_point;
+                deskewed_scan_point.x = deskewedPoint.x();
+                deskewed_scan_point.y = deskewedPoint.y();
+                deskewed_scan_point.z = deskewedPoint.z();
+                deskewed_scan_point.intensity = scan_point.intensity;
+                deskewed_scan_point.ring = scan_point.ring;
+                deskewed_scan_point.range = scan_point.range;
+                scan_out->at(w, h) = deskewed_scan_point;
             }
-            Eigen::Matrix<double, 13, 1> imu_state_plus = stamped_poses.find(point_timestamp)->second;
-            Eigen::Vector3d deskewedPoint = deskewPoint(imu_state_start, imu_state_plus, skewedPoint, I_R_L, I_t_L);
-            TPoint deskewed_scan_point;
-            deskewed_scan_point.x = deskewedPoint.x();
-            deskewed_scan_point.y = deskewedPoint.y();
-            deskewed_scan_point.z = deskewedPoint.z();
-            deskewed_scan_point.intensity = scan_point.intensity;
-            deskewed_scan_point.ring = scan_point.ring;
-            deskewed_scan_point.range = scan_point.range;
-            scan_out->at(w, h) = deskewed_scan_point;
+        }
+    } else{
+        for(int i = 0; i < scan_raw.points.size(); i++) {
+                TPoint scan_point = scan_raw.points[i];
+                uint32_t point_timestamp = scan_raw.points[i].t;
+                Eigen::Vector3d skewedPoint = Eigen::Vector3d(scan_point.x, scan_point.y, scan_point.z);
+                /// Ignore NaNs
+                if(pcl_isnan(scan_point.x) || pcl_isnan(scan_point.y) || pcl_isnan(scan_point.z)) {
+                    continue;
+                }
+
+                if (!point_timestamps.empty()) {
+                    auto it = find(point_timestamps.begin(), point_timestamps.end(), point_timestamp);
+                    if (it == point_timestamps.end()) {
+                        /// New timestamp
+                        point_timestamps.push_back(point_timestamp);
+                        double pointCurrTimeStamp = timestamp + point_timestamp/1e9;
+                        Eigen::Matrix<double, 13, 1> imu_state_plus;
+                        propagator->fast_state_propagate(state, pointCurrTimeStamp, imu_state_plus);
+                        stamped_poses.insert(std::make_pair(point_timestamp, imu_state_plus));
+                    }
+                } else {
+                    /// This is the first point
+//                assert(i == 0);
+                    point_timestamps.push_back(point_timestamp);
+                    pointStartTimeStamp = timestamp + point_timestamp/1e9;
+                    propagator->fast_state_propagate(state, pointStartTimeStamp, imu_state_start);
+                    stamped_poses.insert(std::make_pair(point_timestamp, imu_state_start));
+                }
+                Eigen::Matrix<double, 13, 1> imu_state_plus = stamped_poses.find(point_timestamp)->second;
+                Eigen::Vector3d deskewedPoint = deskewPoint(imu_state_start, imu_state_plus, skewedPoint, I_R_L, I_t_L);
+                TPoint deskewed_scan_point;
+                deskewed_scan_point.x = deskewedPoint.x();
+                deskewed_scan_point.y = deskewedPoint.y();
+                deskewed_scan_point.z = deskewedPoint.z();
+                deskewed_scan_point.intensity = scan_point.intensity;
+                deskewed_scan_point.ring = scan_point.ring;
+                deskewed_scan_point.range = scan_point.range;
+                scan_out->points[i] = deskewed_scan_point;
         }
     }
+
+
 
     auto max_it = max_element(std::begin(point_timestamps), std::end(point_timestamps)); // c++11
     auto min_it = min_element(std::begin(point_timestamps), std::end(point_timestamps)); // c++11
@@ -233,21 +274,29 @@ void lin_estimator::lincalibManager::feed_measurement_lidar(double timestamp, TP
         do_undistortion(timestamp, raw_cloud, cloud_undistorted, T_ndt_predict);
 
         VPointCloud::Ptr cloud_XYZI_undistorted(new VPointCloud);
-        TPointCloud2VPointCloud(cloud_undistorted, cloud_XYZI_undistorted);
+        if(cloud_undistorted->height > 1)
+            TPointCloud2VPointCloud(cloud_undistorted, cloud_XYZI_undistorted);
+        else
+            TPointCloud2VPointCloud_unorganized(cloud_undistorted, cloud_XYZI_undistorted);
         undistorted_cloud = *cloud_XYZI_undistorted;
 
         /// Lidar Odometry
         LOdom->feedScan(timestamp, cloud_XYZI_undistorted, T_ndt_predict);
     } else {
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_XYZI(new pcl::PointCloud<pcl::PointXYZI>);
-        TPointCloud2VPointCloud(cloud_raw, cloud_XYZI);
+        if(cloud_raw->height>1)
+            TPointCloud2VPointCloud(cloud_raw, cloud_XYZI);
+        else
+            TPointCloud2VPointCloud_unorganized(cloud_raw, cloud_XYZI);
 
         /// Lidar Odometry
         LOdom->feedScan(timestamp, cloud_XYZI);
     }
 
+    cout << "============================" <<endl;
     /// Propagate and Update
     do_propagate_update(timestamp);
+    cout << "============================" <<endl;
 
     if(state->_clones_IMU.size() == 1) {
         /// G_T_I1

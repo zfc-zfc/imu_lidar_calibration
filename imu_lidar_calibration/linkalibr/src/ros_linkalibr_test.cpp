@@ -85,8 +85,13 @@ int main(int argc, char** argv) {
     /// Our topics (IMU and LIDAR)
     std::string topic_imu;
     std::string topic_lidar;
+    bool is_pandarXT = false;
+    double time_offset = 0.0;
     nh.param<std::string>("topic_imu", topic_imu, "/imu");
     nh.param<std::string>("topic_lidar", topic_lidar, "/lidar");
+    nh.param<bool>("is_pandarXT",is_pandarXT,true);
+    nh.param<double>("time_offset",time_offset,0.0);
+
 
     /// Location of the ROS bag we want to read in
     std::string path_to_bag;
@@ -129,8 +134,10 @@ int main(int argc, char** argv) {
     }
 
     /// Buffer variables for our system (so we always have imu to use)
+    //Modify here to support PandarXT lidar
     pcl::PointCloud<lin_core::PointXYZIR8Y>::Ptr cloud(new pcl::PointCloud<lin_core::PointXYZIR8Y>);
     pcl::PointCloud<lin_core::PointXYZIR8Y>::Ptr cloud_downsampled(new pcl::PointCloud<lin_core::PointXYZIR8Y>);
+    pcl::PointCloud<pandar_ros::Point>::Ptr cloud_pandar(new pcl::PointCloud<pandar_ros::Point>);
 
     /// Broadcaster
     tf::TransformBroadcaster br1, br2, br3;
@@ -178,7 +185,7 @@ int main(int argc, char** argv) {
         if (s_imu != nullptr && m.getTopic() == topic_imu) {
             imu_pub.publish(s_imu);
             imu_frame_name = s_imu->header.frame_id;
-            double time_imu = (*s_imu).header.stamp.toSec();
+            double time_imu = (*s_imu).header.stamp.toSec() - time_offset;
             Eigen::Matrix<double, 3, 1> wm, am;
             wm << (*s_imu).angular_velocity.x, (*s_imu).angular_velocity.y, (*s_imu).angular_velocity.z;
             am << (*s_imu).linear_acceleration.x, (*s_imu).linear_acceleration.y, (*s_imu).linear_acceleration.z;
@@ -244,6 +251,7 @@ int main(int argc, char** argv) {
             no_of_imu++;
         }
 
+        // Modify here to support PandarXT
         /// Handle Lidar measurement
         sensor_msgs::PointCloud2::ConstPtr s_lidar = m.instantiate<sensor_msgs::PointCloud2>();
         if (s_lidar != nullptr && m.getTopic() == topic_lidar) {
@@ -252,7 +260,37 @@ int main(int argc, char** argv) {
             no_of_imu = 0;
             cloud_pub.publish(*s_lidar);
             double time_lidar = (*s_lidar).header.stamp.toSec();
-            pcl::fromROSMsg(*s_lidar, *cloud);
+            if(is_pandarXT){
+                pcl::fromROSMsg(*s_lidar, *cloud_pandar);
+                int plsize = cloud_pandar->points.size();
+                cloud->header = cloud_pandar->header;
+                uint32_t pcl_height = 32;
+                cloud->height = pcl_height;
+                cloud->width = uint32_t(plsize)/pcl_height;
+                cloud->is_dense = cloud_pandar->is_dense;   //有序点云
+                cloud->resize(cloud_pandar->height * cloud_pandar->width);
+                cout << cloud->height <<endl;
+                int width[32] = {0};
+                for (int i = 0; i < plsize; i++)
+                {
+                    PointXYZIR8Y added_pt;
+                    added_pt.x = cloud_pandar->points[i].x;
+                    added_pt.y = cloud_pandar->points[i].y;
+                    added_pt.z = cloud_pandar->points[i].z;
+                    added_pt.intensity = cloud_pandar->points[i].intensity;
+                    added_pt.t = (cloud_pandar->points[i].timestamp - time_lidar) * 1e9;  //s to ns
+                    added_pt.ring = cloud_pandar->points[i].ring;
+                    int ring = added_pt.ring;
+
+                    cloud->at(width[ring],ring);
+                    width[ring]++;
+
+//                    cloud->push_back(added_pt);
+                }
+            }else{
+                pcl::fromROSMsg(*s_lidar, *cloud);
+            }
+
             /// TODO :  Try Downsampling here
 //            downSampleCloud(cloud, cloud_downsampled, 1);
             /// Send it to linkalibr system
@@ -395,7 +433,7 @@ int main(int argc, char** argv) {
             map_csv_file << map_cloud->points[i].x << ", " << map_cloud->points[i].y << ", "  << map_cloud->points[i].z << "\n";
         }
         map_csv_file.close();
-        std::cout <<"Stored map pointcloud as csv at: " << map_csv_file_name << std::endl;
+        std::cout <<"Stored map point cloud as csv at: " << map_csv_file_name << std::endl;
     }
 
     if(params.gen_data_for_optimization) {

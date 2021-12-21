@@ -52,6 +52,7 @@ endif()
 
 # Include our header files
 include_directories(
+        /home/dji/workspace/Texas_LICalib_ws/devel/include
         src
         ${EIGEN3_INCLUDE_DIR}
         ${Boost_INCLUDE_DIRS}

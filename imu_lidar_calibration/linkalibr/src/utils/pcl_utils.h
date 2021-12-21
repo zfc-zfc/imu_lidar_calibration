@@ -26,7 +26,8 @@ namespace lin_core {
         float intensity; ///< laser intensity reading
         uint8_t ring; ///< laser ring number
         uint32_t t;
-        float range;EIGEN_MAKE_ALIGNED_OPERATOR_NEW // ensure proper alignment
+        float range;
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW // ensure proper alignment
     } EIGEN_ALIGN16;
 
     inline void downsampleCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr in_cloud,
@@ -47,6 +48,26 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(
              (float, intensity, intensity)
              (uint8_t, ring, ring)
              (uint32_t, t, t))
+
+// namespace pandar_ros
+namespace pandar_ros {
+    struct EIGEN_ALIGN16 Point {
+        PCL_ADD_POINT4D;
+        float intensity;
+        double timestamp;
+        uint16_t  ring;
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    };
+}
+
+POINT_CLOUD_REGISTER_POINT_STRUCT(pandar_ros::Point,
+                                  (float, x, x)
+                                          (float, y, y)
+                                          (float, z, z)
+                                          (float, intensity, intensity)
+                                          (double, timestamp, timestamp)
+                                          (std::uint16_t, ring, ring)
+)
 
 typedef lin_core::PointXYZIR8Y TPoint;
 typedef pcl::PointCloud<TPoint> TPointCloud;
@@ -70,6 +91,27 @@ namespace lin_core {
                 point.intensity = input_pc->at(w,h).intensity;
                 output_pc->at(w,h) = point;
             }
+        }
+    }
+}
+
+namespace lin_core {
+    inline void TPointCloud2VPointCloud_unorganized(TPointCloud::Ptr input_pc,
+                                        VPointCloud::Ptr output_pc) {
+        output_pc->header = input_pc->header;
+        output_pc->height = input_pc->height;
+        output_pc->width = input_pc->width;
+        output_pc->is_dense = input_pc->is_dense;
+        output_pc->resize(output_pc->width * output_pc->height);
+        for(int i = 0; i < input_pc->points.size(); i++) {
+                if(pcl_isnan(input_pc->points[i].x)||pcl_isnan(input_pc->points[i].y)||pcl_isnan(input_pc->points[i].z))
+                    continue;
+                lin_core::VPoint point;
+                point.x = input_pc->points[i].x;
+                point.y = input_pc->points[i].y;
+                point.z = input_pc->points[i].z;
+                point.intensity = input_pc->points[i].intensity;
+                output_pc->points[i] = point;
         }
     }
 }
