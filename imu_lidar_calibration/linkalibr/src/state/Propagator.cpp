@@ -102,6 +102,7 @@ void Propagator::fast_state_propagate(State *state, /// Pointer to state
     /// First lets construct an IMU vector of measurements we need
     double time0 = state->_timestamp+last_prop_time_offset;
     double time1 = timestamp+t_off_new;
+//    cout << "time0 = " << time0 << ", time1" << time1 <<endl;
     vector<IMUDATA> prop_data = Propagator::select_IMU_readings(imu_data, time0, time1);
     /// Save the original IMU state
     Eigen::VectorXd orig_val = state->_imu->value();

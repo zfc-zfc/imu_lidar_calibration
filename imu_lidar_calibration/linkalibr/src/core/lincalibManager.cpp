@@ -120,7 +120,7 @@ void lin_estimator::lincalibManager::do_undistortion(double timestamp,
             }
         }
     } else{
-        for(int i = 0; i < scan_raw.points.size(); i++) {
+        for(int i = 0; i < scan_out->size(); i++) {
                 TPoint scan_point = scan_raw.points[i];
                 uint32_t point_timestamp = scan_raw.points[i].t;
                 Eigen::Vector3d skewedPoint = Eigen::Vector3d(scan_point.x, scan_point.y, scan_point.z);
@@ -158,6 +158,7 @@ void lin_estimator::lincalibManager::do_undistortion(double timestamp,
                 deskewed_scan_point.range = scan_point.range;
                 scan_out->points[i] = deskewed_scan_point;
         }
+
     }
 
 
@@ -293,10 +294,8 @@ void lin_estimator::lincalibManager::feed_measurement_lidar(double timestamp, TP
         LOdom->feedScan(timestamp, cloud_XYZI);
     }
 
-    cout << "============================" <<endl;
     /// Propagate and Update
     do_propagate_update(timestamp);
-    cout << "============================" <<endl;
 
     if(state->_clones_IMU.size() == 1) {
         /// G_T_I1
@@ -328,7 +327,7 @@ void lin_estimator::lincalibManager::do_propagate_update(double timestamp) {
     }
 
     /// Basically getting the timestamp of the first scan in the NDT map
-    /// The surfelAssociation code needs this
+    /// The surfel Association code needs this
     if(first_propagation) {
         first_propagation = false;
         map_time = timestamp;

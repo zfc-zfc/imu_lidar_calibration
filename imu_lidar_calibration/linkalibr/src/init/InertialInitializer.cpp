@@ -78,7 +78,7 @@ bool InertialInitializer::initialize_with_imu(double &time0, /// Timestamp that 
         return false;
     }
 
-    /// Sum of the linear and angular readings from the window with older data (the secondnew window)
+    /// Sum of the linear and angular readings from the window with older data (the second new window)
     Eigen::Matrix<double, 3, 1> linsum = Eigen::Matrix<double, 3, 1>::Zero();
     Eigen::Matrix<double, 3, 1> angsum = Eigen::Matrix<double, 3, 1>::Zero();
     for(IMUDATA data : window_secondnew) {

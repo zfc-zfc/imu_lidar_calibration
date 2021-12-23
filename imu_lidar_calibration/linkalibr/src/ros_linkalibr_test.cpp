@@ -263,14 +263,7 @@ int main(int argc, char** argv) {
             if(is_pandarXT){
                 pcl::fromROSMsg(*s_lidar, *cloud_pandar);
                 int plsize = cloud_pandar->points.size();
-                cloud->header = cloud_pandar->header;
-                uint32_t pcl_height = 32;
-                cloud->height = pcl_height;
-                cloud->width = uint32_t(plsize)/pcl_height;
-                cloud->is_dense = cloud_pandar->is_dense;   //有序点云
-                cloud->resize(cloud_pandar->height * cloud_pandar->width);
-                cout << cloud->height <<endl;
-                int width[32] = {0};
+                cloud->resize(plsize);
                 for (int i = 0; i < plsize; i++)
                 {
                     PointXYZIR8Y added_pt;
@@ -280,12 +273,7 @@ int main(int argc, char** argv) {
                     added_pt.intensity = cloud_pandar->points[i].intensity;
                     added_pt.t = (cloud_pandar->points[i].timestamp - time_lidar) * 1e9;  //s to ns
                     added_pt.ring = cloud_pandar->points[i].ring;
-                    int ring = added_pt.ring;
-
-                    cloud->at(width[ring],ring);
-                    width[ring]++;
-
-//                    cloud->push_back(added_pt);
+                    cloud->push_back(added_pt);
                 }
             }else{
                 pcl::fromROSMsg(*s_lidar, *cloud);
@@ -364,7 +352,7 @@ int main(int argc, char** argv) {
                 Eigen::Matrix3d I1_R_Ik = I1_T_Ik.block(0, 0, 3, 3);
                 Eigen::Quaterniond I1_quat_Ik(I1_R_Ik);
 
-                /// This the lidar pose in the L1 frame (not in G frame, where G is the world frame for system)
+                /// This is the lidar pose in the L1 frame (not in G frame, where G is the world frame for system)
                 Eigen::Matrix4d L1_T_Lk = sys->get_track_lodom()->get_current_odometry().pose;
                 Eigen::Vector3d L1_t_Lk = L1_T_Lk.block(0, 3, 3, 1);
                 Eigen::Matrix3d L1_R_Lk = L1_T_Lk.block(0, 0, 3, 3);
