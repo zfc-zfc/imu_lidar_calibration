@@ -10,9 +10,9 @@
 	<param name="time_offset"   type="double" value="0" />
 
         <!-- bag parameters -->
-        <param name="path_bag"    type="string" value="/home/dji/Downloads/Rosbag/pandarXT/hesai_mavros_sync_lab1.bag" />
+        <param name="path_bag"    type="string" value="/home/dji/Downloads/Rosbag/pandarXT/hesai_mavros_sync_boyu5.bag" />
         <param name="bag_start"   type="double" value="0.0" />
-        <param name="bag_durr"    type="int"    value="-1" />
+        <param name="bag_durr"    type="int"    value="40" />
 
         <!-- Estimator Parameters -->
         <param name="use_fej" type="bool" value="false" />

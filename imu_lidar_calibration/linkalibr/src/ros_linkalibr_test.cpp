@@ -60,6 +60,7 @@ void downSampleCloud(const pcl::PointCloud<lin_core::PointXYZIR8Y>::Ptr cloud_in
     }
 }
 
+
 int main(int argc, char** argv) {
     /// Launch ros node
     ros::init(argc, argv, "ros_test_node");
@@ -338,7 +339,7 @@ int main(int argc, char** argv) {
             if(no_of_lodoms > 0) {
                 Eigen::Matrix3d I_R_L = lin_core::quat_2_Rot(sys->get_state()->_calib_LIDARtoIMU->quat());
                 Eigen::Vector3d I_t_L = sys->get_state()->_calib_LIDARtoIMU->pos();
-                cout << "I_R_L = " << RotMtoEuler(I_R_L).transpose() *180/M_PI<< endl;
+                cout << "I_R_L = " << RotMtoEuler(I_R_L).transpose() *180/M_PI << endl;
                 cout << "I_t_L = " << I_t_L.transpose() << endl;
 
                 Eigen::Matrix4d I_T_L = Eigen::Matrix4d::Identity();

@@ -31,6 +31,7 @@
 #include <ostream>
 #include <fstream>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
+#include <utils/math_utils.h>
 
 typedef message_filters::sync_policies::ApproximateTime
         <imuPacket::imuPacket,
@@ -160,8 +161,14 @@ public:
         graph.add(boost::make_shared<HECFactor>(R(0), gtsam::Point3(axisAngle_imu.x(),axisAngle_imu.y(),axisAngle_imu.z()),
                 gtsam::Point3(axisAngle_lidar.x(), axisAngle_lidar.y(), axisAngle_lidar.z()), rotationNoise));
         ROS_INFO_STREAM("Frame: " << no_of_frames << " / " << max_frames);
+
         if(no_of_frames == max_frames) {
+            struct timeval tv1, tv2;
+            gettimeofday(&tv1,NULL);
             solve();
+            gettimeofday(&tv2,NULL);
+            std::cout << "Initialization Time(ms): " << tv2.tv_sec*1000 + tv2.tv_usec/1000 - (tv1.tv_sec*1000 + tv1.tv_usec/1000) << std::endl;
+
         }
         no_of_frames++;
         imuIntegratorOpt->resetIntegration();
@@ -173,7 +180,7 @@ public:
         gtsam::Values result = gtsam::LevenbergMarquardtOptimizer(graph, initial_values).optimize();
         gtsam::Rot3 finalResult = result.at<gtsam::Rot3>(R(0));
         gtsam::Marginals marginals(graph, result);
-        std::cout << "Rot3: \n" << std::endl;
+        std::cout << "Rot: \n" << std::endl;
         std::cout << finalResult.matrix() << std::endl;
         std::cout << "Euler Angles: " << finalResult.matrix().eulerAngles(0, 1, 2).transpose()*180/M_PI << std::endl;
         std::cout << "Marginal Covariance" << std::endl;
@@ -185,7 +192,8 @@ public:
         I_T_L.block(0, 0, 3, 3) = finalResult.matrix();
         I_T_L.block(0, 3, 3, 1) = Eigen::Vector3d::Zero();
         result_file << I_T_L;
-        result_file.close();
+        std::cout << "Initial Rotation = " << (RotMtoEuler(finalResult.matrix()).transpose())*180/M_PI << std::endl;
+         result_file.close();
 
         ros::shutdown();
     }

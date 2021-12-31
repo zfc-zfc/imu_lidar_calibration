@@ -158,7 +158,6 @@ void lin_estimator::lincalibManager::do_undistortion(double timestamp,
                 deskewed_scan_point.range = scan_point.range;
                 scan_out->points[i] = deskewed_scan_point;
         }
-
     }
 
 
@@ -267,6 +266,7 @@ void lin_estimator::lincalibManager::feed_measurement_lidar(double timestamp, TP
         if(!is_initialized_linkalibr)
             return;
     }
+    cout << " ================================= " << endl;
 
     if(params.do_undistortion) {
         TPointCloud::Ptr cloud_undistorted(new TPointCloud);
