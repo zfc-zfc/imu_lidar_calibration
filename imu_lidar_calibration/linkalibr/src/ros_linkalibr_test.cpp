@@ -338,6 +338,9 @@ int main(int argc, char** argv) {
             if(no_of_lodoms > 0) {
                 Eigen::Matrix3d I_R_L = lin_core::quat_2_Rot(sys->get_state()->_calib_LIDARtoIMU->quat());
                 Eigen::Vector3d I_t_L = sys->get_state()->_calib_LIDARtoIMU->pos();
+                cout << "I_R_L = " << RotMtoEuler(I_R_L).transpose() *180/M_PI<< endl;
+                cout << "I_t_L = " << I_t_L.transpose() << endl;
+
                 Eigen::Matrix4d I_T_L = Eigen::Matrix4d::Identity();
                 I_T_L.block(0, 0, 3, 3) = I_R_L;
                 I_T_L.block(0, 3, 3, 1) = I_t_L;
@@ -446,9 +449,11 @@ int main(int argc, char** argv) {
     result_calibration << I_T_L;
     result_calibration.close();
 
-    Eigen::Vector3d eulerXYZ = I_R_L.eulerAngles(0, 1, 2)*180/M_PI;
+    Eigen::Vector3d eulerXYZ = I_R_L.eulerAngles(2, 1, 0)*180/M_PI;
+    Eigen::Vector3d eulerXYZ1 = RotMtoEuler(I_R_L)*180/M_PI;
     ROS_INFO_STREAM("Translation [in m]: " << I_t_L.transpose());
-    ROS_INFO_STREAM("Euler Angles [in deg]: " << eulerXYZ.transpose());
+    ROS_INFO_STREAM("Euler Angles [in deg]    : " << eulerXYZ.transpose());
+    ROS_INFO_STREAM("Euler Angles our [in deg]: " << eulerXYZ1.transpose());
 
     if(params.gen_data_for_optimization) {
         /// Batch Optimization stuff
